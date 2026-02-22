@@ -1,0 +1,68 @@
+# --------------------------------------------------------------------------- #
+# Experiment Configuration
+# --------------------------------------------------------------------------- #
+
+experiment:
+  name: "FPW_VIT_FT_BASE"
+  description: "fine tune code test"
+  output_dir: "/homes/iws/ziawang/Documents/lab/affmae_root/output" # Base directory for all outputs
+  device: "cuda"
+  wandb_enabled: false 
+
+# --------------------------------------------------------------------------- #
+# Data Configuration
+# --------------------------------------------------------------------------- #
+data:
+  # base_path: "/homes/iws/ziawang/Documents/lab/affmae_root/data/Paratubular Capillaries 8_19_25"
+  base_path: "/homes/iws/ziawang/Documents/lab/affmae_root/data/fpwdata"
+  input_ext: ".tiff"
+  in_channels: 1
+  # indices: [0, 1, 2]
+  indices: [0, 1, 2, 3]
+  num_classes: 5 # should be indices + bg class
+  img_size: 512
+  batch_size: 18
+  num_workers: 0
+
+
+# --------------------------------------------------------------------------- #
+# Model Architecture Parameters 
+# --------------------------------------------------------------------------- #
+model:
+  model_type: "vit" # 'aff' or 'vit'
+  pretrained_ckpt_path: "/homes/iws/ziawang/Documents/lab/affmae_root/affmae_weights/ckpt_epoch_274_vit_base.pth"
+  patch_size: 8
+
+  # 64.10M param
+  vit_embed_dim: 768
+  vit_depth: 12
+  vit_num_heads: 12
+
+  # decoder config should always be the between all runs
+  # ensure clean and fair comparison
+  decoder_embed_dim: 512
+  # decoder depth is always 4 since the aff encoder has 4 stages
+  decoder_depth: 8
+  decoder_num_heads: 16
+
+# --------------------------------------------------------------------------- #
+# Model & Training Configuration
+# --------------------------------------------------------------------------- #
+train:
+  epochs: 700
+  weight_decay: 0.0075
+
+  # Learning Rates
+  learning_rate: 1.0e-4
+  min_lr: 1.0e-8 # @ANDY NOTE: MODIFIED!
+  warmup_epochs: 25
+
+  # Loss function: 'focal' or 'dice'
+  loss_fn: "combo"
+  # Class weights for the loss function
+  # class_weighting: [0.2, 2.0, 3.0, 2.0] # Corresponds to [BG, Endo, Nuc, GL3] # original [0.2, 2.0, 3.0, 2.0]
+  class_weighting: [0.2, 2.0, 3.0, 2.0, 3.0] # Corresponds to [BG, LD, LRI, PGMI, Slits] 
+
+  # Evaluation
+  start_eval_epoch: 10000
+  log_freq: 1

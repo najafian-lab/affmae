@@ -1,0 +1,60 @@
+# --------------------------------------------------------------------------- #
+# Experiment & Logging
+# --------------------------------------------------------------------------- #
+experiment:
+  experiment_name: "VIT_BASE_PRETRAIN_0.5mask"
+  project: "affmae-pretraining"
+  entity: "najafian-lab-2025"
+  wandb_enabled: true 
+  output_dir: "/homes/iws/ziawang/Documents/lab/affmae_root/output"
+  # output_dir: "/nfs/stak/users/smerkoud/hpc-share/affmae/output"
+  seed: 42
+  resume_path: "" 
+  
+# --------------------------------------------------------------------------- #
+# Data 
+# --------------------------------------------------------------------------- #
+data:
+  path: "/var/tmp/ziawang/shards/emdata-{00000..00312}.tar"
+  # path: "/nfs/stak/users/smerkoud/hpc-share/affmae/data/emdata-{00000..00312}.tar"
+  img_size: 512
+  in_channels: 1
+  batch_size: 18
+  num_workers: 8
+  prefetch_factor: 3
+  pin_memory: true
+
+# --------------------------------------------------------------------------- #
+# Model Architecture
+# --------------------------------------------------------------------------- #
+model:
+  model_type: "vit" # 'aff' or 'vit'
+  mask_ratio: 0.5
+  patch_size: 8
+
+  # 64.10M param
+  vit_embed_dim: 512
+  vit_depth: 18
+  vit_num_heads: 8
+
+  # decoder config should always be the between all runs
+  # ensure clean and fair comparison
+  decoder_embed_dim: 384
+  # decoder depth is always 4 since the aff encoder has 4 stages
+  decoder_depth: 4
+  decoder_num_heads: 6
+
+# --------------------------------------------------------------------------- #
+# Training
+# --------------------------------------------------------------------------- #
+train:
+  epochs: 500
+  num_accum: 4
+  base_lr: 2.5e-4
+  weight_decay: 0.05
+  beta1: 0.883
+  beta2: 0.935
+  warmup_steps: 10000
+  log_freq: 100
+  save_freq: 25
+  device: "cuda"

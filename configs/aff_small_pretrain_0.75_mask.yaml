@@ -1,0 +1,66 @@
+# --------------------------------------------------------------------------- #
+# Experiment & Logging
+# --------------------------------------------------------------------------- #
+experiment:
+  experiment_name: "AFF_SMALL_PRETRAIN_0.75_MASK"
+  project: "affmae-pretraining"
+  entity: "najafian-lab-2025"
+  wandb_enabled: false 
+  output_dir: "/homes/iws/ziawang/Documents/lab/affmae_root/output"
+  seed: 42
+  resume_path: "" 
+  
+# --------------------------------------------------------------------------- #
+# Data 
+# --------------------------------------------------------------------------- #
+data:
+  path: "/var/tmp/ziawang/shards/emdata-{00000..00312}.tar"
+  img_size: 512
+  in_channels: 1
+  batch_size: 64
+  num_workers: 8
+  prefetch_factor: 3
+  pin_memory: true
+
+# --------------------------------------------------------------------------- #
+# Model Architecture
+# --------------------------------------------------------------------------- #
+model:
+  model_type: "aff" # 'aff' or 'vit'
+  mask_ratio: 0.75
+  patch_size: 8
+  
+  # aff
+  # 21.77M
+  aff_embed_dims: [96, 192, 384, 512]
+  aff_depths: [2,3,9,2]
+  aff_num_heads: [3,6,12,16]
+  aff_nbhd_sizes: [64, 64, 64, 70000]
+  aff_cluster_size: 8
+  aff_alpha: 10.0
+  aff_global_attention: false
+  aff_ds_rates: [0.4, 0.4, 0.4, 0.4]
+  aff_mlp_ratio: 2
+  aff_merging_method: "cluster"
+
+  # decoder config should always be the between all runs
+  # ensure clean and fair comparison
+  decoder_embed_dim: 384
+  # decoder depth is always 4 since the aff encoder has 4 stages
+  decoder_depth: 4
+  decoder_num_heads: 6
+
+# --------------------------------------------------------------------------- #
+# Training
+# --------------------------------------------------------------------------- #
+train:
+  epochs: 300
+  num_accum: 4
+  base_lr: 5.0e-4
+  weight_decay: 0.05
+  beta1: 0.883
+  beta2: 0.935
+  warmup_steps: 10000
+  log_freq: 300
+  save_freq: 25
+  device: "cuda"

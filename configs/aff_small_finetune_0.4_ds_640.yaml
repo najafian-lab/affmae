@@ -1,0 +1,73 @@
+# --------------------------------------------------------------------------- #
+# Experiment Configuration
+# --------------------------------------------------------------------------- #
+
+experiment:
+  name: "FPW_AFF_FT_0.4_ds_640"
+  description: "fine tune code test"
+  output_dir: "/homes/iws/ziawang/Documents/lab/affmae_root/output" # Base directory for all outputs
+  device: "cuda"
+  wandb_enabled: false 
+
+# --------------------------------------------------------------------------- #
+# Data Configuration
+# --------------------------------------------------------------------------- #
+data:
+  # base_path: "/homes/iws/ziawang/Documents/lab/affmae_root/data/Paratubular Capillaries 8_19_25"
+  base_path: "/homes/iws/ziawang/Documents/lab/affmae_root/data/fpwdata"
+  input_ext: ".tiff"
+  in_channels: 1
+  indices: [0, 1, 2, 3]
+  # indices: [0, 1, 2]
+  num_classes: 5 # should be indices + bg class
+  img_size: 640
+  batch_size: 24
+  num_workers: 5
+
+
+# --------------------------------------------------------------------------- #
+# Model Architecture Parameters 
+# --------------------------------------------------------------------------- #
+model:
+  model_type: "aff" # 'aff' or 'vit'
+  pretrained_ckpt_path: "/homes/iws/ziawang/Documents/lab/affmae_root/affmae_weights/ckpt_epoch_299_0.4_normal.pth"
+  patch_size: 8
+  
+  # aff
+  aff_embed_dims: [96, 192, 384, 512]
+  aff_depths: [2,3,9,2]
+  aff_num_heads: [3,6,12,16]
+  aff_nbhd_sizes: [64, 64, 64, 70000]
+  aff_cluster_size: 8
+  aff_alpha: 10.0
+  aff_global_attention: false
+  aff_ds_rates: [0.4, 0.4, 0.4, 0.4]
+  aff_mlp_ratio: 2
+  aff_merging_method: "cluster"
+
+  decoder_embed_dim: 384
+  decoder_depth: 4
+  decoder_num_heads: 6
+  decoder_use_cls_token: true
+
+# --------------------------------------------------------------------------- #
+# Model & Training Configuration
+# --------------------------------------------------------------------------- #
+train:
+  epochs: 700
+  weight_decay: 0.0075
+
+  # Learning Rates
+  learning_rate: 1.0e-4
+  min_lr: 5.0e-8 # @ANDY NOTE: MODIFIED!
+  warmup_epochs: 25
+
+  # Loss function: 'focal' or 'dice'
+  loss_fn: "combo"
+  # Class weights for the loss function
+  # class_weighting: [0.2, 2.0, 3.0, 2.0] # Corresponds to [BG, Endo, Nuc, GL3] # original [0.2, 2.0, 3.0, 2.0]
+  class_weighting: [0.2, 2.0, 3.0, 2.0, 3.0] # Corresponds to [BG, LD, LRI, PGMI, Slits] 
+
+  # Evaluation
+  start_eval_epoch: 10000
+  log_freq: 1
