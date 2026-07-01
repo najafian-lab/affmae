@@ -1,4 +1,6 @@
-Repository for the preprint is available, but some improvments to the codebase/kernels are still being made and documentation is in-progress: be weary that kernels are not full proof yet, and we will build more testing to verify all cases. It works for the current AFF-22M config, but if you any issues please leave a comment. Expect updates to the more stable kernel code in early March.
+ECCV 2026 repository (under progress)
+
+Repository for the preprint version of the paper is available, but some improvments to the codebase are still being made and documentation is in-progress: be weary that kernels, in current repo, are not full proof yet, and we will build more testing to verify all cases. It works for the current configs, but if you have any issues with other resolutions/custom model sizes please leave a comment. Expect updates to the more stable kernel code shortly.
 
 This repository contains the code to train both ViT and AFF using masked auto-encoding
 
