@@ -1,0 +1,91 @@
+# --------------------------------------------------------------------------- #
+# TEMPLATE: finetune a pretrained AFF-MAE for segmentation at 512px.
+#
+# Copy this file, point `data.base_path` at your dataset, set
+# `model.pretrained_ckpt_path` to the encoder you pretrained, then run:
+#
+#     python finetune.py --config configs/template_finetune_512.yaml
+#
+# Expected layout under base_path (see docs/custom_data.md):
+#
+#     data/finetune/
+#       train/images/*.tif    train/masks/*.tiff
+#       val/images/*.tif      val/masks/*.tiff
+#       test/images/*.tif     test/masks/*.tiff
+#
+# Images and masks pair up by filename stem, so `img_0001.tif` needs
+# `img_0001.tiff`. Unpaired files are ignored silently.
+# --------------------------------------------------------------------------- #
+
+experiment:
+  name: "MY_FINETUNE_512"
+  description: "segmentation finetune on my own data"
+  output_dir: "output"
+  device: "cuda"
+  wandb_enabled: false          # set true and export WANDB_API_KEY to log runs
+
+data:
+  base_path: "${DATA_ROOT:-data}/finetune"
+  input_ext: ".tif"             # extension of the *images*; masks are always .tiff
+  in_channels: 1                # 1 for greyscale, 3 for RGB
+
+  # Masks are multi-channel TIFFs: one binary channel per annotated structure.
+  # `indices` picks which of those channels to train on, so [0, 1] trains on the
+  # first two. num_classes must be len(indices) + 1 for background, and
+  # train.class_weighting must have exactly num_classes entries.
+  indices: [0, 1]
+  num_classes: 3                # len(indices) + 1 background
+
+  img_size: 512
+  batch_size: 24                # lower this if you run out of memory
+  num_workers: 2
+
+model:
+  model_type: "aff"
+
+  # CHANGE THIS to your pretraining checkpoint. Set CHECKPOINT_ROOT to keep
+  # weights outside the repo (e.g. `export CHECKPOINT_ROOT=/mnt/weights`).
+  pretrained_ckpt_path: "${CHECKPOINT_ROOT:-weights}/pretrain/my_pretrain.pth"
+  patch_size: 8
+
+  # These must match the pretraining config exactly, or the checkpoint will not
+  # load into the encoder.
+  aff_embed_dims: [128, 256, 512, 768]
+  aff_depths: [3, 4, 16, 2]
+  aff_num_heads: [4, 8, 16, 24]
+  aff_nbhd_sizes: [64, 64, 64, 64]
+  aff_cluster_size: 8
+  aff_alpha: 10.0
+  aff_global_attention: false
+  aff_ds_rates: [0.4, 0.4, 0.4, 0.4]
+  aff_mlp_ratio: 3
+  aff_merging_method: "cluster"
+
+  decoder_embed_dim: 384
+  decoder_depth: 4
+  decoder_num_heads: 6
+  decoder_use_cls_token: true
+
+  # "auto" picks the fused Triton kernels on CUDA and the torch fallback
+  # elsewhere. Leave it alone unless you have profiled the alternative.
+  cluster_attention_backend: "auto"
+  decoder_deform_backend: "auto"
+  decoder_knn_cache: true
+
+train:
+  epochs: 400
+  weight_decay: 0.0075
+
+  learning_rate: 1.0e-4
+  min_lr: 1.0e-6
+  warmup_epochs: 25
+  layer_decay: 0.6              # per-layer LR decay; lower means a more frozen encoder
+
+  loss_fn: "combo"              # 'combo', 'focal', or 'dice'
+
+  # One weight per class, background first. Raise a class's weight if it is rare.
+  class_weighting: [0.2, 2.0, 3.0]
+
+  start_eval_epoch: 10
+  log_freq: 1
+  num_accum: 1

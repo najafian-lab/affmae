@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "affmae"
+version = "2.0.0"
+description = "AFF-MAE: masked autoencoding with adaptive feature fields (ECCV 2026)"
+readme = "README.md"
+requires-python = ">=3.10"
+# TODO(license): pending lab guidance. Add the LICENSE file and set this
+# together; do not ship an unreviewed license claim.
+
+# Runtime dependencies, and the single source of truth for packages:
+# environment.yml only creates the interpreter and installs this file's extras
+# via pip. Versions are deliberately loose. For byte-exact reproduction generate
+# a lockfile (conda-lock, or pip freeze inside the env) rather than adding a
+# second hand-maintained list.
+# Kept deliberately small: what you need to build a model and run inference.
+# Triton is NOT here -- it is CUDA-centric and a hard dep would contradict CPU
+# and MPS support. Training extras live in the optional groups below.
+dependencies = [
+    "torch>=2.4",
+    "numpy",
+    "pyyaml",
+    # Downloading released checkpoints from the EMWeights registry.
+    "requests",
+    # Default-installed on purpose. The `unfused` decoder path calls knn_keops,
+    # and without it that silently falls back to a slower implementation -- which
+    # inflated every fused-vs-unfused ratio we measured before it was installed
+    # (the 1024px figure went 2.66x -> 1.82x once it was). Installing it is safe
+    # everywhere because dispatch.can_use_keops() refuses it by *capability*:
+    # KeOps has no ROCm and no MPS backend, so those platforms take the
+    # device-agnostic PyTorch path whether or not the package is present.
+    "pykeops",
+]
+
+[project.optional-dependencies]
+# The fast path. Triton kernels; CUDA (or ROCm) required.
+cuda = ["triton>=3.0"]
+# ViT baseline models use timm's reference PatchEmbed/Block.
+baselines = ["timm>=1.0"]
+# Rendering: figures, overlays, PCA feature maps.
+viz = ["matplotlib", "scikit-learn", "opencv-python", "pillow"]
+# Reading micrographs for inference (tif/tiff) + preprocessing.
+# imagecodecs: some micrographs are LZW-compressed TIFFs, which tifffile
+# cannot decode without it.
+inference = ["opencv-python", "pillow", "tifffile", "imagecodecs", "torchvision"]
+# Datasets and augmentation for training.
+train = ["albumentations", "webdataset", "tifffile", "imagecodecs", "tqdm",
+         "opencv-python"]
+# FPW geometry metrics.
+metrics = ["scikit-image", "scipy"]
+# Gradio demo (app.py). huggingface_hub fetches the released checkpoints when
+# app.py runs as a HuggingFace Space; affmae itself downloads over `requests`.
+demo = ["gradio", "pillow", "huggingface_hub"]
+# Everything, for reproducing the paper.
+all = ["affmae[cuda,baselines,viz,train,metrics,demo,inference,keops]"]
+# Optional exact large-k KNN acceleration for supported CPU/CUDA environments.
+# ROCm and MPS use the device-agnostic PyTorch implementation.
+keops = ["pykeops"]
+# Profiling annotations; falls back to torch.cuda.nvtx when absent.
+profile = ["nsight"]
+# FLOP counting, used by the analysis scripts under scripts/.
+flops = ["fvcore"]
+# Experiment tracking.
+wandb = ["wandb"]
+dev = ["pytest>=7", "pyflakes"]
+
+[tool.setuptools.packages.find]
+include = ["affmae*"]
+
+[tool.setuptools.package-data]
+affmae = ["py.typed"]
+
+[tool.pytest.ini_options]
+# `.` so `affmae.*` resolves from a source checkout, `tests` so the suite can
+# `from conftest import ...`.
+pythonpath = [".", "tests"]
+testpaths = ["tests"]
+markers = [
+    "slow: long-running tests, deselect with -m 'not slow'",
+]
+filterwarnings = [
+    "ignore::FutureWarning:timm.*",
+    "ignore:torch.meshgrid:UserWarning",
+]

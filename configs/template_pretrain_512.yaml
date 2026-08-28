@@ -1,0 +1,78 @@
+# --------------------------------------------------------------------------- #
+# TEMPLATE: pretrain AFF-MAE at 512px on your own WebDataset shards.
+#
+# Copy this file, point `data.path` at your shards, set `data.total_samples`,
+# then run:
+#
+#     python pretrain.py --config configs/template_pretrain_512.yaml
+#
+# Every path below is relative to the repository root. Set DATA_ROOT to keep the
+# dataset outside the repo (e.g. `export DATA_ROOT=/mnt/datasets`).
+# See docs/custom_data.md for the expected shard layout.
+# --------------------------------------------------------------------------- #
+
+experiment:
+  experiment_name: "MY_PRETRAIN_512"
+  project: "affmae-pretraining"
+  entity: ""                    # your W&B entity; ignored while wandb_enabled is false
+  wandb_enabled: false          # set true and export WANDB_API_KEY to log runs
+  output_dir: "output"
+  seed: 42
+  resume_path: ""               # path to a checkpoint to resume from, or "" to start fresh
+
+data:
+  # WebDataset shard pattern. The brace range is inclusive and the digit count
+  # must match your filenames exactly: customdata-000.tar ... customdata-031.tar
+  path: "${DATA_ROOT:-data}/pretrain/customdata-{000..031}.tar"
+
+  # CHANGE THIS. Total images across all shards. A WebDataset has no length, so
+  # the epoch boundary comes from this number rather than from the data, and a
+  # wrong value silently truncates or repeats the epoch instead of failing.
+  # docs/custom_data.md has a one-liner that counts them.
+  total_samples: 50000
+
+  img_size: 512
+  in_channels: 1                # 1 for greyscale, 3 for RGB
+  batch_size: 48                # global batch, divided across ranks
+  num_workers: 8
+  prefetch_factor: 3
+  pin_memory: true
+
+model:
+  model_type: "aff"
+  mask_ratio: 0.5
+  patch_size: 8
+
+  # AFF-Base, 65.6M params. Shrink aff_depths/aff_embed_dims for a smaller model.
+  aff_embed_dims: [128, 256, 512, 768]
+  aff_depths: [3, 4, 16, 2]
+  aff_num_heads: [4, 8, 16, 24]
+  aff_nbhd_sizes: [64, 64, 64, 64]
+  aff_cluster_size: 8
+  aff_alpha: 10.0
+  aff_global_attention: false
+  aff_ds_rates: [0.4, 0.4, 0.4, 0.4]
+  aff_mlp_ratio: 3
+  aff_merging_method: "cluster"
+
+  decoder_embed_dim: 384
+  decoder_depth: 4              # one block per encoder stage
+  decoder_num_heads: 6
+
+  # "auto" picks the fused Triton kernels on CUDA and the torch fallback
+  # elsewhere. Leave it alone unless you have profiled the alternative.
+  cluster_attention_backend: "auto"
+  decoder_deform_backend: "auto"
+  decoder_knn_cache: true
+
+train:
+  epochs: 400
+  num_accum: 6
+  base_lr: 3.5e-4
+  weight_decay: 0.05
+  beta1: 0.883
+  beta2: 0.935
+  warmup_steps: 10000           # lower this for a small dataset
+  log_freq: 300
+  save_freq: 25
+  device: "cuda"
