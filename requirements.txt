@@ -1,0 +1,22 @@
+# Space runtime. Mirrors affmae[cuda,baselines,viz,inference,metrics,demo],
+# minus pykeops: KeOps compiles CUDA C++ on first use and needs a toolchain,
+# and dispatch.can_use_keops() gates it by capability, so its absence just
+# means the PyTorch KNN path. The shipped decoder backend does not call it.
+spaces
+torch
+triton>=3.0
+timm>=1.0
+gradio
+pillow
+matplotlib
+scikit-learn
+opencv-python-headless
+tifffile
+imagecodecs
+torchvision
+scikit-image
+scipy
+numpy
+pyyaml
+requests
+huggingface_hub

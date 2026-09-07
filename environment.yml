@@ -1,0 +1,36 @@
+# Mamba/conda recipe for a working AFF-MAE environment, GPU by default.
+#
+# The single source of truth for packages is pyproject.toml. This file only
+# creates the interpreter and hands every package to pip, so there is no second
+# list that can drift out of step with the first.
+#
+#   mamba env create -f environment.yml
+#   mamba activate affmae
+#   pytest -q
+#
+# That is the whole install: Triton kernels, training, evaluation, figures and
+# the test suite. On a CPU-only or Apple-silicon host, drop `cuda` from the
+# extras below -- Triton is the one GPU-only piece, and everything else runs on
+# the PyTorch fallbacks.
+#
+# This replaced a 406-line `conda env export`. That file pinned 354 linux-64
+# build hashes, mixed CUDA 12.1 and 13.1 packages, and carried Jupyter and
+# debugger packages, so it could not solve on any other platform and was not a
+# usable spec. If you need byte-exact reproduction, generate a lockfile
+# (`conda-lock`, or `pip freeze` inside the env) -- a lockfile is a build
+# artifact, not something to maintain by hand.
+name: affmae
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  # Uncomment if you want to build the optional CLUSTEN CUDA extension
+  # (affmae/ops/cuda_ext); the pure-Triton and PyTorch paths need neither.
+  # - gxx_linux-64
+  # - ninja
+  - pip:
+      # keops is intentionally absent: pykeops is a core dependency now,
+      # so it installs either way. dispatch.can_use_keops() refuses it on
+      # ROCm and MPS by capability, which is what makes that safe.
+      - -e .[cuda,inference,viz,train,metrics,wandb,dev]
